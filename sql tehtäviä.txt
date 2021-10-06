@@ -1,0 +1,923 @@
+K1
+Listaa tunnus, sähköpostiosoite ja webbisivun osoite 
+kaikista järjestelmään kuuluvista hotelleista. 
+
+select  hotelid, email, webpage 
+from HTLHotel
+
+K2
+Hae mainoskampanjaa varten kaikkien helsinkiläisten 
+naispuolisten varaaja-asiakkaiden etunimi, sähköpostiosoite 
+ja asiakasnumero. 
+Järjestä tulos sähköpostiosoitteen perusteella.
+
+select firstname, email, customerid 
+from HTLCustomer
+where sex ='F' and
+home_city = 'Helsinki'
+order by email
+
+K03
+select bookingid, roomtypeid, persons, message 
+from HTLBooking
+where hotelid='TURKAMA' and
+message <> 'null' and arrivaldate = DATE '2013-09-06'
+order by roomtypeid
+
+K04
+
+
+Listaa aikavälillä 2.9.2013 - 7.9.2013 alkavien varausten varausnumero,
+hotellitunnus, saapumispäivä suomalaisessa muodossa, huonetyypin tunnus,
+ henkilöiden lukumäärä ja varauksen kesto päivinä. 
+Anna kestosarakkeelle nimeksi DAYS ja saapumispäivälle ARRIVALDATE. 
+Järjestä tulos hotellitunnuksen ja alkamispäivän mukaan.
+
+select bookingid, hotelid, 
+to_char(b.arrivaldate, 'dd.mm.yyyy') arrivaldate, roomtypeid, persons, departuredate - arrivaldate as days
+
+from HTLbooking b
+
+where arrivaldate > DATE '2013-09-03' and arrivaldate < DATE '2013-09-08'
+
+order by hotelid, arrivaldate
+ -> OK
+
+sarakkeen lisääminen:
+SELECT 1 AS DAYS FROM HTLHotel
+
+Date conversions (when settings are Finnish), only some examples
+   lets assume adate ='11.2.2000:15.30.12'
+      to_char(adate,'DD.MM.YYYY') = 11.2.2000
+
+K5
+Selvitä huonetyyppien määrittelytiedoista, 
+minkä tyyppisiä huoneita on Turussa sijaitsevissa hotelleissa. 
+Anna hotellin nimi ja osoite sekä huonetyypin nimi, 
+luokitustunnus ja tyyppiä olevien huoneiden lukumäärä hotellissa.
+
+select distinct hotelname, address, roomtypename, categoryid, numberOfRooms
+
+from HTLHotel, HTLRoomtype
+
+where city ='Turku'
+and htlhotel.hotelid = htlroomtype.hotelid
+
+->OK
+
+K6
+
+Selvitä millaisia huoneita Turun hotelli Kamarista (tunnus TURKAMA) 
+on varattu 7.9.2013 alkavalle hotellivuorokaudelle. 
+Anna huonetyyppin nimi ja yleinen luokitustunnus. 
+Huom. varaus on voinut alkaa jo ennen 7.9. 
+
+select distinct roomTypeName, categoryID
+
+from HTLRoomtype, HTLBooking, HTLHotel
+
+where
+HTLHotel.hotelID = HTLRoomtype.hotelID and
+HTLRoomtype.hotelID = HTLBooking.hotelID and
+HTLRoomtype.roomtypeID = HTLBooking.roomtypeID and
+city='Turku' and
+arrivalDate <= date '2013-09-07' and
+departureDate > date '2013-09-07'
+
+-> OK
+
+
+K7
+Laadi Tallinnan Maja hotellille (tunnus TALMAJA) luettelo varauksista, 
+joissa saapumispäivä sijoittuu välille 6.9.2013-8.9.2013. 
+Luettelossa tulisi olla varausnumero, 
+saapumispäivä (suomalaisessa muodossa) sarakkeessa ARRIVAL, 
+yöpymisvuorokausien lukumäärä sarakkeessa DAYS, 
+ja asiakkaan nimi suku- ja etunimi yhdistettyinä, 
+blankko nimien välissä, sarakkeeksi NAME. 
+Järjestä tulos saapumispäivän mukaan. 
+
+select htlbooking.bookingId, to_char(htlbooking.arrivaldate, 'dd.mm.yyyy') as ARRIVAL,
+htlbooking.departuredate - htlbooking.arrivaldate as days, 
+to_char(htlcustomer.lastname ||' '|| htlcustomer.firstname) as Name
+
+from HTLBooking, HTLHotel, HTLCustomer
+
+where
+htlbooking.customerid=htlcustomer.customerid and
+htlhotel.hotelid=htlbooking.hotelid and
+htlhotel.hotelid = 'TALMAJA' and
+arrivalDate > date '2013-09-05' and
+arrivalDate < date '2013-09-09'
+order by arrivaldate
+
+-> ok
+to_char(htlcustomer.firstname ||' ' || htlcustomer.lastname) as NAME
+ratkaisu:
+SELECT bookingid,
+       to_char(arrivaldate,'DD.MM.YYYY') arrival,
+       departuredate-arrivaldate DAYS,
+       lastname||' '||firstname NAME
+FROM hTLbooking,
+     hTLcustomer
+WHERE htlbooking.customerid=htlcustomer.customerId
+  AND arrivaldate BETWEEN date '2013-09-06' AND date '2013-09-08'
+  AND hotelid='TALMAJA'
+ORDER BY arrivaldate
+
+K8
+Laadi selvitys Tallinnan hotellien huonehinnoista perjantaille 6.9.2013. 
+Ota selvitykseen hotellin nimi, 
+huonetyypin nimi, hinnoitteluperusteen kuvailu, 
+huoneen perushinta ja tieto sisältyykö aamiainen. 
+(pricecategoryid kertoo )
+---------
+select distinct h.hotelname, t.roomtypename, c.description, p.normalprice, c.breakfastincluded
+
+from HTLhotel h, HTLRoomprice p, HTLRoomtype t, HTLpricecategory c
+
+where 
+h.hotelid = p.hotelid and
+p.roomtypeid = t.roomtypeid and
+p.hotelId = t.hotelid and
+p.pricecategoryid = c.pricecategoryid and
+
+h.city = 'Tallinn' and
+
+p.lastvaliddate >= date '2013-09-06' and
+p.firstvaliddate <= date '2013-09-06'
+
+-> palauttaa liikaa hakutuloksia, todennäköisesti voimassaoloaika virheellinen
+
+ratkaisu:
+SELECT hotelname,
+       roomtypename,
+       description,
+       normalprice,
+       breakfastincluded
+FROM htlhotel,
+     htlroomtype,
+     htlpricecategory,
+     htlroomprice
+WHERE htlhotel.hotelid=htlroomtype.hotelid
+  AND htlroomprice.pricecategoryid=htlpricecategory.pricecategoryid
+  AND htlroomprice.roomtypeid=htlroomtype.roomtypeid
+  AND htlroomprice.hotelid=htlroomtype.hotelid
+  AND 5 BETWEEN firstday AND lastday
+  AND date '2013-09-06' BETWEEN Firstvaliddate AND lastvaliddate
+  AND htlhotel.city='Tallinn'
+
+K9
+Kaaleppi Kulkumies saapuu 8.9.2013 klo 15 Tallinnan Maja hotelliin (tunnus TALMAJA). Hänellä on varaus. 
+Vastaanottovirkailija haluaa selvittää, mikä huone Kaalepille on varattu. 
+Laadi kysely, joka tuottaa tuloksenaan Kaalepille varatun huoneen numeron, huoneen tyyppitiedon (tyypin nimi), 
+ja varauksessa ilmoitetun lähtöpäivän suomalaisessa muodossa.
+
+SELECT r.roomnumber, t.roomtypename, to_char(b.departuredate, 'dd.mm.yyyy') departuredate
+FROM HTLBooking b, HTLroom r, HTLroomtype t, HTLcustomer c
+
+where 
+b.customerid = c.customerid and
+b.roomtypeid = t.roomtypeid and
+r.roomtypeid = b.roomtypeid and
+c.firstname = 'Kaaleppi' and
+c.lastname = 'Kulkumies' and
+arrivaldate = date '2013-09-08'
+-> liikaa hakutuloksia (kierretty halutulla huonenumerolla)- tee joskus oikein
+
+Tässä tehtävässä riittää käyttää seuraavia tauluja 
+HTLroom, HTLallocated, HTLBooking, HTLCustomer ja HTLRoomType. Vähemmälläkin saattaa pärjätä.
+
+SELECT htlroom.roomnumber,
+       roomtypename,
+       to_char(departuredate,'dd.mm.yyyy') departuredate
+FROM HTLCUSTOMER,
+     HTLBooking,
+     htlallocated,
+     htlroomtype,
+     htlroom
+WHERE lastname='Kulkumies'
+  AND firstname='Kaaleppi'
+  AND htlcustomer.customerid=htlbooking.customerid
+  AND htlbooking.bookingid=htlallocated.bookingid
+  AND htlallocated.roomnumber=htlroom.roomnumber
+  AND htlroom.hotelid=htlallocated.hotelid
+  AND htlroom.hotelid=htlroomtype.hotelid
+  AND htlroom.roomtypeid=htlroomtype.roomtypeid
+  AND htlbooking.hotelid='TALMAJA'
+  AND htlbooking.arrivaldate= date '2013-09-08'
+
+k10
+Anna Tallinnan Maja hotellissa (tunnus TALMAJA) 6.9.2013 yöpyneiden asiakkaiden 
+huonenumero, sukunimi, etunimi ja vastaako asiakas maksusta. 
+Järjestä tulos ensisijaisesti huonenumeron mukaisesti 
+ja huoneen sisäisesti anna maksusta vastaava ensimmäiseksi.
+
+select distinct HTLVisit.roomNumber, firstname, lastname, payingGuest
+from HTLVisitor, HTLVisit, HTLRoom
+where
+HTLVisitor.visitID = HTLVisit.visitID and
+HTLRoom.hotelID = HTLVisit.hotelID and
+HTLVisit.hotelID = 'TALMAJA' and
+HTLRoom.roomNumber = HTLVisit.roomNumber and
+checkinTime <= TO_DATE('2013-09-07', 'YYYY-MM-DD') and
+(checkoutTime IS null OR    
+checkoutTime > TO_DATE('2013-09-07', 'YYYY-MM-DD'))
+order by
+roomNumber, payingGuest desc
+
+K11
+
+Hae hotellit, joissa ei ole lainkaan yhden hengen huoneita. 
+Anna hotellin nimi ja paikkakunta. 
+Järjestä tulos kaupungin perusteella.
+
+select 
+
+
+k??
+select htlcustomer.customerid, to_char(htlcustomer.firstname ||' ' || htlcustomer.lastname) as NAME, count(htlbooking.bookingid) as BOOKINGS
+from (select htlcustomer.customerid, to_char(htlcustomer.firstname ||' ' || htlcustomer.lastname) as NAME, count(htlbooking.bookingid) as BOOKINGS
+from htlcustomer, htlbooking
+where htlcustomer.customerid = htlbooking.customerid 
+group by htlcustomer.customerid, htlcustomer.firstname, htlcustomer.lastname
+order by BOOKINGS desc)
+where rownum <= 3
+
+k??
+SELECT (amaara/kmaara*100) 
+AS OCCUPIED FROM (SELECT count(roomNumber) 
+AS kmaara FROM HRoom WHERE hotelID='TURKAMA'),
+(SELECT count(roomNumber) 
+AS amaara FROM HGuest WHERE checkinDate<=date'2012-1-27' 
+AND checkoutDate>=date'2012-1-28' AND hotelID='TURKAMA')
+
+K11:
+SELECT DISTINCT HHotel.HOTELNAME, HHotel.CITY
+FROM HHotel
+ 
+INNER JOIN HRoomClassInHotel
+ON HHotel.HOTELID = HRoomClassInHotel.HOTELID
+ 
+INNER JOIN HRoomType
+ON HRoomClassInHotel.ROOMTYPEID = HRoomType.TYPEID
+ 
+WHERE HOTELNAME != 'Kamari, Turku'
+ 
+ORDER BY CITY
+->
+
+select distinct HTLHotel.hotelname, HTLhotel.city
+from HTLhotel, HTLRoometype
+inner join HTL
+where hotelid != 'TURKAMA'
+order by city
+ 
+K12:
+Hae kaikki Tallinnan Maja (TALMAJA) hotellissa samalla käynnillä sekä 6.9. että 7.9.2013 yöpyneet matkustajat ja heidän huoneensa.
+Anna listassa huonenumero ja yöpyjän nimi (etunimi ja sukunimi katenoituna ja blankkolla erotelytuna) sarakkeessa NAME. 
+Järjestä tulos huonenumeron perusteella. 
+
+SELECT distinct HTLVisit.roomNumber, firstname || ' ' || lastname NAME
+FROM HTLVisitor, HTLVisit, HTLRoom, HTLVisitdate
+WHERE
+  HTLVisitor.visitID = HTLVisit.visitID and
+  HTLRoom.hotelID = HTLVisit.hotelID and
+  HTLVisitdate.visitid = HTLVisit.visitID and
+  HTLVisit.hotelID = 'TALMAJA' and
+  HTLRoom.roomNumber = HTLVisit.roomNumber and
+  datevisited = to_DATE('2013-09-07', 'YYYY-MM-DD') and
+  datevisited = to_DATE('2013-09-07', 'YYYY-MM-DD')
+order by
+  roomNumber
+-> ok
+
+
+K13:
+8.9.2013 aamulla klo 9 tuotetaan raportti, josta näkyvät edellisen viikon toteutumattomat varaukset. 
+Raporttiin otetaan varausnumero, hotellin tunnus, varaajan etunimi ja sukunimi, varaajan katuosoite 
+ja kotikaupunki sekä varauksessa ilmoitetut saapumis- ja lähtöpäivät. 
+Vihje: tyhjäarvot tuottavat kaikissa vertailuissa tuntemattoman tuloksen myös, jos niitä on kokoelmissa. 
+
+selecti distich HTLBooking.bookingid, HTLHotel.hotelid, firstname, lastname, home_address, home_city, arrivaldate, departuredate
+
+from HTLHotel, htlbooking, 
+where checkintime = 'null' or chekouttime = 'null'
+
+K12
+ 	
+
+SELECT roomnumber,
+       firstname||' '||lastname name
+FROM htlvisitor,
+     htlvisit
+WHERE htlvisitor.visitid=htlvisit.visitid
+  AND htlvisit.hotelid='TALMAJA'
+  AND htlvisit.visitid IN
+    (SELECT visitid
+     FROM htlvisitdate
+     WHERE datevisited=date '2013-09-06')
+  AND htlvisit.visitid IN
+    (SELECT visitid
+     FROM htlvisitdate
+     WHERE datevisited=date '2013-09-07')
+ORDER BY roomnumber
+
+K13 	
+
+SELECT bookingid,
+       hotelid,
+       firstname,
+       lastname,
+       home_address,
+       home_city,
+       to_char(arrivaldate,'dd.mm.yyyy') arrivaldate,
+       to_char(departuredate,'dd.mm.yyyy') departuredate
+FROM htlbooking,
+     htlcustomer
+WHERE htlbooking.customerid=htlcustomer.customerid
+  AND arrivaldate<date '2013-09-8'
+  AND arrivaldate>=date '2013-09-8' -7
+  AND htlbooking.bookingid NOT IN
+    (SELECT bookingid
+     FROM htlvisit
+     WHERE bookingid IS NOT NULL)
+
+K14 	
+
+SELECT to_char(bookeddate,'dd.mm.yyyy') staydate,
+       normalprice roomprice,
+       greatest(htlbooking.persons - htlroomtype.persons,0) ebneeded,
+       extrabed ebprice,
+       htlbooking.persons guests,
+       breakfastfee bfprice
+FROM htlbooking,
+     htldatesbooked,
+     htlroomprice,
+     htlroomtype
+WHERE htlbooking.bookingid=242
+  AND htlbooking.bookingid=htldatesbooked.bookingid
+  AND htlbooking.roomtypeid=htlroomtype.roomtypeid
+  AND htlbooking.hotelid=htlroomtype.hotelid
+  AND htlroomprice.pricecategoryid=htldatesbooked.pricecategory
+  AND htlroomprice.hotelid=htlroomtype.hotelid
+  AND htlroomprice.roomtypeid=htlroomtype.roomtypeid
+  AND htldatesbooked.bookeddate BETWEEN htlroomprice.firstvaliddate AND htlroomprice.lastvaliddate
+ORDER BY staydate
+
+K15 	
+
+SELECT roomnumber,
+       categoryid
+FROM htlroom,
+     htlroomtype
+WHERE htlroom.roomtypeid=htlroomtype.roomtypeid
+  AND htlroom.hotelid='TURKAMA'
+  AND htlroomtype.hotelid='TURKAMA'
+  AND persons=1
+  AND roomnumber NOT IN
+    (SELECT roomnumber
+     FROM htlallocated,
+          htldatesbooked
+     WHERE htlallocated.bookingid=htldatesbooked.bookingid
+       AND bookeddate=date '2013-09-05'
+       AND htlallocated.hotelid='TURKAMA')
+  AND roomnumber NOT IN
+    (SELECT roomnumber
+     FROM htlvisit,
+          htlvisitdate
+     WHERE hotelid ='TURKAMA'
+       AND htlvisit.visitid=htlvisitdate.visitid
+       AND datevisited= date '2013-09-05')
+
+K16 	
+
+SELECT roomnumber,
+       roomtypename
+FROM htlroom,
+     htlroomtype
+WHERE htlroom.roomtypeid=htlroomtype.roomtypeid
+  AND htlroom.hotelid=htlroomtype.hotelid
+  AND htlroom.hotelid='TALMAJA'
+  AND persons>1
+  AND htlroom.roomnumber NOT IN
+    (SELECT roomnumber
+     FROM htlvisit,
+          htlvisitdate
+     WHERE htlvisit.hotelid='TALMAJA'
+       AND htlvisit.visitid=htlvisitdate.visitid
+       AND (htlvisitdate.datevisited =date '2013-09-06'
+            OR htlvisitdate.datevisited =date '2013-09-07'))
+  AND roomnumber NOT IN
+    (SELECT roomnumber
+     FROM htlbooking,
+          htlallocated,
+          htldatesbooked
+     WHERE htlbooking.hotelid='TALMAJA'
+       AND htlbooking.bookingid=htlallocated.bookingid
+       AND htlbooking.bookingid=htldatesbooked.bookingid
+       AND (bookeddate = date '2013-09-07'
+            OR bookeddate = date '2013-09-06'))
+
+
+Y01:
+Hae järjestelmään kuuluvien suomalaisten hotellien lukumäärä. 
+Anna vastaus sarakkeessa HOTELS. 
+
+select count(*) as hotels
+from HTLhotel
+where countrycode = 'FI'
+
+Y02:
+Laadi kysely, jolla selvität huonetyyppikuvausten perusteella 
+Turussa tarjolla olevien 
+hotellihuoneiden kokonaismäärän. 
+Anna vastaus sarakkeessa ROOMS_IN_TURKU. 
+
+select sum(htlroomtype.numberOfRooms) as ROOMS_IN_TURKU
+from HTLRoomtype, HTLHotel
+where htlroomtype.hotelid = htlhotel.hotelid
+and city = 'Turku'
+
+-> ok
+
+Y03
+Tee kysely, jolla selvität mikä hotelli on tähtiluokituksen perusteella paras. 
+Anna tuloksena hotellin tunnus, nimi, kaupunki sekä tähtien lukumäärä.
+ 
+select hotelid, hotelname, city, suurin as stars
+from HTLhotel,
+(select max(stars) suurin from htlhotel) isoin
+where htlhotel.stars = isoin.suurin
+
+Y04
+Kuinka monessa maassa asuvia asiakkaita on varaajarekisterissä? 
+Anna vastaus sarakkeessa COUNTRIES. 
+
+
+select count(distinct home_country) as countries
+from htlcustomer
+
+Y05:
+
+Laske varausten perusteella mikä on hotellivierailun keskimääräinen 
+ja maksipituus yhden desimaalin tarkkudella Turun Kamari hotellissa (tunnus TURKAMA). 
+Anna arvot sarakkeissa AVG_STAY ja MAX_STAY. 
+Vihje: Pyöristys round-funktiolla. 
+Lasketaan varauksista ei todellisista vierailuajoista. 
+
+SELECT round(avg(departuredate-arrivaldate),1) as avg_stay, max(departuredate-arrivaldate) as max_stay
+from htlbooking
+where hotelid = 'TURKAMA'
+
+Y06:
+Selvitä mikä on halvin (MINI) ja kallein (MAXI) huonehinta Tallinnan Maja hotellissa (id TALMAJA)
+yhdeksi vuorokaudeksi 29.9.2013 kahdelle hengelle aamiaisineen. 
+(Huom: hotellilla on useita hinnoittelujärjestelmiä, funktiolla to_char(x,'d') 
+saat selville päiväyksen x viikonpäivän numeron)
+
+select maxi, mini
+from 
+where hotelid = 'TALJAMA'
+
+Y07
+select count(varatuthuoneet)/count(HTLroom.roomnumber) OCCUPIED
+
+from HTlroom, (select roomnumber varatuthuoneet from HTlvisit, HTLvisitdate where HTLvisit.hotelID = 'TURKAMA' and HTLvisitdate.visitID = HTLvisit.visitID
+and HTlvisitdate.datevisited = date '2013-09-06')
+
+Y08
+
+select countrycode, count(*) hotels
+from htlhotel
+group by countrycode
+order by countrycode
+
+ok
+
+Y09
+SELECT DISTINCT to_char(datevisited, 'DD.MM.YYYY') VISITDATE,
+ sum(htlvisit.persons) as visitors
+FROM htlvisitdate left outer join htlvisit on htlvisit.visitid=htlvisitdate.visitid
+WHERE datevisited between date '2013-09-02' and date '2013-09-08'
+AND htlvisit.hotelid='TALMAJA'
+GROUP BY datevisited
+ORDER BY visitdate
+
+Y10:
+select htlroomtype.hotelid, htlroomtype.roomtypeid, 
+htlroomtype.numberofrooms as ROOMS_DEFINED, 
+count(htlroom.roomnumber) as ROOMS_IN_SYSTEM
+from  htlroomtype left outer join htlroom 
+     on HTLRoomtype.hotelID = HTLRoom.hotelID and 
+HTLRoomtype.roomTypeID = HTLRoom.roomTypeID
+group by htlroomtype.hotelid, htlroomtype.roomtypeid, numberofrooms
+order by hotelid, roomtypeid
+
+Y11
+
+select htlbooking.hotelid, count(latearrival='Y') as expected_late
+from htlbooking, htlvisit
+where arrivaldate = date '2013-09.06' and
+htlvisit.chedkintime > datetime '2013-9-6.18.00.00' and
+
+
+	
+Y12
+select HTLRoomtype.roomtypeid, count(numberofrooms) as occupied
+ 
+from HTLRoomtype, HTLBooking
+ 
+where HTLRoomtype.hotelid = 'TURKAMA'
+and HTLRoomtype.hotelid = HTLBooking.hotelid
+and HTLRoomtype.roomtypeid = HTLBooking.roomtypeid
+and HTLBooking.arrivaldate <= to_date('6.9.2013','dd.mm.yyyy')
+and departuredate >= to_date('6.9.2013','dd.mm.yyyy')
+
+
+Y13
+select htlroom.roomtypeid, 
+count(HTLRoomtype.numberOfRooms)-count(htlvisit.roomNumber) as EMPTY
+from htlroom, htlvisit, htlvisitdate,HTLROOMTYPE
+where htlroom.hotelid = 'TURKAMA' and 
+htlroom.hotelid = htlvisit.hotelid and 
+htlroom.roomnumber = htlvisit.roomnumber and 
+htlvisitdate.visitid = htlvisit.visitid and 
+htlvisitdate.datevisited = date '2013-09-06' and 
+HTLROOMTYPE.hotelID = htlvisit.hotelID  and 
+HTLROOMTYPE.hotelID = HTLRoom.hotelID and 
+HTLROOMTYPE.roomtypeID = HTLRoom.roomtypeID
+group by htlroom.roomtypeid
+order by empty
+
+select htlroom.roomtypeid, 
+count(HTLRoomtype.numberOfRooms)-count(htlvisit.roomNumber) as EMPTY
+from htlroom, htlvisit, htlvisitdate,HTLROOMTYPE
+where htlroom.hotelid = 'TURKAMA' and htlroom.hotelid = htlvisit.hotelid and htlroom.roomnumber = htlvisit.roomnumber and htlvisitdate.visitid = htlvisit.visitid and htlvisitdate.datevisited = date '2013-09-06' and HTLROOMTYPE.hotelID = htlvisit.hotelID  and HTLROOMTYPE.hotelID = HTLRoom.hotelID and HTLROOMTYPE.roomtypeID = HTLRoom.roomtypeID
+group by htlroom.roomtypeid
+order by empty
+
+VIrheellisiä arvoja = empty on 0
+
+TAI
+select HTLRoom.roomtypeid, count(HTLRoom.roomnumber) as occupied 
+
+from  HTLVisit, HTLVisitdate, HTLRoom
+
+where HTLRoom.hotelid = 'TURKAMA'
+and HTLRoom.hotelid = HTLVisit.hotelid
+and HTLRoom.roomnumber = HTLVisit.roomnumber
+and HTLVisitdate.visitID = HTLVisitdate.visitid 
+and HTLVisitdate.datevisited =  to_date('6.9.2013','dd.mm.yyyy')
+
+group by HTLRoom.roomtypeid
+
+	
+
+    select  HTLRoomtype.roomtypeid, numberOfRooms-count(htlvisit.roomNumber)
+    from HTLRoomtype, HTLVisit, HTLRoom, HTLVisitdate
+     
+    where HTLVisitdate.datevisited <> to_date('6.9.2013','dd.mm.yyyy')
+     
+    and HTLRoom.hotelid = HTLVisit.hotelid
+    and HTLRoom.roomnumber = HTLVisit.roomnumber and HTLRoomtype.roomtypeid = HTLRoom.roomtypeid
+    and HTLRoom.hotelid = HTLroomtype.hotelid
+    and HTLVisitdate.visitid = HTLVisit.visitid
+    and HTLRoom.hotelid = 'TURKAMA'
+
+
+Oikeat vastaukset:
+Erä 1
+Tehtävä 	Vastaus
+K1 	
+
+SELECT hotelid,
+       email,
+       webpage
+FROM htlhotel
+
+K2 	
+
+SELECT firstname,
+       email,
+       customerid
+FROM htlcustomer
+WHERE sex='F'
+  AND home_city='Helsinki'
+ORDER BY email
+
+K3 	
+
+SELECT roomtypeid,
+       bookingid,
+       persons,
+       message
+FROM htlbooking
+WHERE hotelid='TURKAMA'
+  AND arrivaldate = date '2013-09-06'
+  AND message IS NOT NULL
+ORDER BY roomtypeid
+
+K4 	
+
+SELECT bookingid,
+       hotelid,
+       to_char(arrivaldate,'dd.mm.yyyy')arrivaldate,
+       roomtypeid,
+       persons,
+       departuredate-arrivaldate DAYS
+FROM HTLbooking
+WHERE arrivaldate BETWEEN date '2013-09-02' AND date '2013-09-07'
+ORDER BY hotelid,
+         arrivaldate
+
+Erä 2
+Tehtävä 	Vastaus
+K5 	
+
+SELECT hotelname,
+       address,
+       roomtypename,
+       categoryid,
+       numberofrooms
+FROM hTLhotel,
+     htlroomtype
+WHERE htlhotel.hotelid=htlroomtype.hotelid
+  AND city='Turku'
+
+K6 	
+
+SELECT DISTINCT roomtypename,
+                categoryid
+FROM htlbooking,
+     htlroomtype
+WHERE htlbooking.roomtypeid=htlroomtype.roomtypeid
+  AND htlroomtype.hotelId=htlroomtype.hotelId
+  AND htlbooking.hotelid='TURKAMA'
+  AND htlbooking.arrivaldate<=date '2013-09-07'
+  AND htlbooking.departuredate>= date '2013-09-08'
+
+K7 	
+
+SELECT bookingid,
+       to_char(arrivaldate,'DD.MM.YYYY') arrival,
+       departuredate-arrivaldate DAYS,
+       lastname||' '||firstname NAME
+FROM hTLbooking,
+     hTLcustomer
+WHERE htlbooking.customerid=htlcustomer.customerId
+  AND arrivaldate BETWEEN date '2013-09-06' AND date '2013-09-08'
+  AND hotelid='TALMAJA'
+ORDER BY arrivaldate
+
+K8 	
+
+SELECT hotelname,
+       roomtypename,
+       description,
+       normalprice,
+       breakfastincluded
+FROM htlhotel,
+     htlroomtype,
+     htlpricecategory,
+     htlroomprice
+WHERE htlhotel.hotelid=htlroomtype.hotelid
+  AND htlroomprice.pricecategoryid=htlpricecategory.pricecategoryid
+  AND htlroomprice.roomtypeid=htlroomtype.roomtypeid
+  AND htlroomprice.hotelid=htlroomtype.hotelid
+  AND 5 BETWEEN firstday AND lastday
+  AND date '2013-09-06' BETWEEN Firstvaliddate AND lastvaliddate
+  AND htlhotel.city='Tallinn'
+
+K9 	
+
+SELECT htlroom.roomnumber,
+       roomtypename,
+       to_char(departuredate,'dd.mm.yyyy') departuredate
+FROM HTLCUSTOMER,
+     HTLBooking,
+     htlallocated,
+     htlroomtype,
+     htlroom
+WHERE lastname='Kulkumies'
+  AND firstname='Kaaleppi'
+  AND htlcustomer.customerid=htlbooking.customerid
+  AND htlbooking.bookingid=htlallocated.bookingid
+  AND htlallocated.roomnumber=htlroom.roomnumber
+  AND htlroom.hotelid=htlallocated.hotelid
+  AND htlroom.hotelid=htlroomtype.hotelid
+  AND htlroom.roomtypeid=htlroomtype.roomtypeid
+  AND htlbooking.hotelid='TALMAJA'
+  AND htlbooking.arrivaldate= date '2013-09-08'
+
+Erä 3
+K10 	
+
+SELECT roomnumber,
+       lastname,
+       firstName,
+       payingguest
+FROM htlvisitor,
+     htlvisit,
+     htlvisitdate
+WHERE htlvisitor.visitid=htlvisit.visitid
+  AND htlvisit.hotelid='TALMAJA'
+  AND htlvisitdate.visitid=htlvisit.visitid
+  AND htlvisitdate.datevisited= date '2013-09-06'
+ORDER BY roomnumber,
+         payingguest DESC
+
+K11 	
+
+SELECT hotelname,
+       city
+FROM htlhotel
+WHERE hotelid NOT IN
+    (SELECT hotelid
+     FROM htlroomtype
+     WHERE persons=1)
+ORDER BY city
+
+K12 	
+
+SELECT roomnumber,
+       firstname||' '||lastname name
+FROM htlvisitor,
+     htlvisit
+WHERE htlvisitor.visitid=htlvisit.visitid
+  AND htlvisit.hotelid='TALMAJA'
+  AND htlvisit.visitid IN
+    (SELECT visitid
+     FROM htlvisitdate
+     WHERE datevisited=date '2013-09-06')
+  AND htlvisit.visitid IN
+    (SELECT visitid
+     FROM htlvisitdate
+     WHERE datevisited=date '2013-09-07')
+ORDER BY roomnumber
+
+K13 	
+
+SELECT bookingid,
+       hotelid,
+       firstname,
+       lastname,
+       home_address,
+       home_city,
+       to_char(arrivaldate,'dd.mm.yyyy') arrivaldate,
+       to_char(departuredate,'dd.mm.yyyy') departuredate
+FROM htlbooking,
+     htlcustomer
+WHERE htlbooking.customerid=htlcustomer.customerid
+  AND arrivaldate<date '2013-09-8'
+  AND arrivaldate>=date '2013-09-8' -7
+  AND htlbooking.bookingid NOT IN
+    (SELECT bookingid
+     FROM htlvisit
+     WHERE bookingid IS NOT NULL)
+
+K14 	
+
+SELECT to_char(bookeddate,'dd.mm.yyyy') staydate,
+       normalprice roomprice,
+       greatest(htlbooking.persons - htlroomtype.persons,0) ebneeded,
+       extrabed ebprice,
+       htlbooking.persons guests,
+       breakfastfee bfprice
+FROM htlbooking,
+     htldatesbooked,
+     htlroomprice,
+     htlroomtype
+WHERE htlbooking.bookingid=242
+  AND htlbooking.bookingid=htldatesbooked.bookingid
+  AND htlbooking.roomtypeid=htlroomtype.roomtypeid
+  AND htlbooking.hotelid=htlroomtype.hotelid
+  AND htlroomprice.pricecategoryid=htldatesbooked.pricecategory
+  AND htlroomprice.hotelid=htlroomtype.hotelid
+  AND htlroomprice.roomtypeid=htlroomtype.roomtypeid
+  AND htldatesbooked.bookeddate BETWEEN htlroomprice.firstvaliddate AND htlroomprice.lastvaliddate
+ORDER BY staydate
+
+K15 	
+
+SELECT roomnumber,
+       categoryid
+FROM htlroom,
+     htlroomtype
+WHERE htlroom.roomtypeid=htlroomtype.roomtypeid
+  AND htlroom.hotelid='TURKAMA'
+  AND htlroomtype.hotelid='TURKAMA'
+  AND persons=1
+  AND roomnumber NOT IN
+    (SELECT roomnumber
+     FROM htlallocated,
+          htldatesbooked
+     WHERE htlallocated.bookingid=htldatesbooked.bookingid
+       AND bookeddate=date '2013-09-05'
+       AND htlallocated.hotelid='TURKAMA')
+  AND roomnumber NOT IN
+    (SELECT roomnumber
+     FROM htlvisit,
+          htlvisitdate
+     WHERE hotelid ='TURKAMA'
+       AND htlvisit.visitid=htlvisitdate.visitid
+       AND datevisited= date '2013-09-05')
+
+K16 	
+
+SELECT roomnumber,
+       roomtypename
+FROM htlroom,
+     htlroomtype
+WHERE htlroom.roomtypeid=htlroomtype.roomtypeid
+  AND htlroom.hotelid=htlroomtype.hotelid
+  AND htlroom.hotelid='TALMAJA'
+  AND persons>1
+  AND htlroom.roomnumber NOT IN
+    (SELECT roomnumber
+     FROM htlvisit,
+          htlvisitdate
+     WHERE htlvisit.hotelid='TALMAJA'
+       AND htlvisit.visitid=htlvisitdate.visitid
+       AND (htlvisitdate.datevisited =date '2013-09-06'
+            OR htlvisitdate.datevisited =date '2013-09-07'))
+  AND roomnumber NOT IN
+    (SELECT roomnumber
+     FROM htlbooking,
+          htlallocated,
+          htldatesbooked
+     WHERE htlbooking.hotelid='TALMAJA'
+       AND htlbooking.bookingid=htlallocated.bookingid
+       AND htlbooking.bookingid=htldatesbooked.bookingid
+       AND (bookeddate = date '2013-09-07'
+            OR bookeddate = date '2013-09-06'))
+
+Erä 4
+Y01 	
+
+SELECT count(*) HOTELS
+FROM htlhotel
+WHERE countrycode='FI'
+
+Y02 	
+
+SELECT sum(numberofrooms) ROOMS_IN_TURKU
+FROM HTLRoomtype
+WHERE hotelid IN
+    (SELECT hotelid
+     FROM htlhotel
+     WHERE city ='Turku')
+
+Y03 	
+
+SELECT hotelid,
+       hotelname,
+       city,
+       stars
+FROM htlhotel
+WHERE stars =
+  SELECT max(stars)
+  FROM htlhotel
+
+Y04 	
+
+SELECT count(DISTINCT home_country) COUNTRIES
+FROM htlcustomer
+
+Y05 	
+
+SELECT round(avg(departuredate-arrivaldate),1) AVG_STAY,
+       max(departuredate-arrivaldate) MAX_STAY
+FROM htlbooking
+WHERE hotelid='TURKAMA'
+
+Y06 	
+
+SELECT max(normalprice+2*breakfastfee*decode(breakfastincluded,'Y',0,1)) MAXI,
+       min(normalprice+2*breakfastfee*decode(breakfastincluded,'Y',0,1)) MINI
+FROM htlroomprice,
+     htlhotel,
+     htlroomtype,
+     htlpricecategory
+WHERE htlroomprice.hotelid=htlhotel.hotelid
+  AND htlhotel.hotelid='TALMAJA'
+  AND htlroomtype.persons>=2
+  AND htlroomtype.hotelid=htlroomprice.hotelid
+  AND htlroomtype.roomtypeid=htlroomprice.roomtypeid
+  AND date '2013-09-29' BETWEEN firstvaliddate AND lastvaliddate
+  AND htlroomprice.priceCategoryid=htlpricecategory.pricecategoryid
+  AND to_char(date '2013-09-29','d') BETWEEN firstday AND lastday
+
+Y07 	
+
+SELECT 100*varattu/yhteensa OCCUPIED
+FROM
+  (SELECT count(*) varattu
+   FROM HTLVisitdate,
+        HTLVisit
+   WHERE htlvisit.visitid=htlvisitdate.visitid
+     AND dateVisited= date '2013-09-6'
+     AND htlvisit.hotelid='TURKAMA'),
+  (SELECT count(*) yhteensa
+   FROM htlroom
+   WHERE hotelid='TURKAMA')
